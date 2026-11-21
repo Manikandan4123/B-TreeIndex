@@ -1,0 +1,453 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>B+ Tree Index Lab</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&family=Space+Grotesk:wght@500;700&display=swap">
+<style>
+/* Layout: lab-bench two-pane tool. Inputs on the left; tree diagram, key ratios, charts, tables and console output on the right. Stacks on phones. */
+:root{
+  --bg:#f4f6f8; --surface:#ffffff; --surface2:#eef1f5; --fg:#141a22; --muted:#5a6676; --line:#d9dfe7;
+  --c1:#0d8a8c; --c2:#d1560c; --accent:#0d6e70; --accent-fg:#ffffff; --ok:#1a7f3c; --bad:#b3261e; --grid:#e3e8ee;
+  --font-d:'Space Grotesk',system-ui,sans-serif; --font-b:'Inter',system-ui,sans-serif; --font-m:'JetBrains Mono',ui-monospace,Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#0f141a; --surface:#171e27; --surface2:#1e2732; --fg:#e8edf3; --muted:#93a0b1; --line:#2b3643;
+  --c1:#3fc3c5; --c2:#f28c4e; --accent:#3fc3c5; --accent-fg:#06201f; --ok:#52c77a; --bad:#ff8a80; --grid:#242f3b; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0f141a; --surface:#171e27; --surface2:#1e2732; --fg:#e8edf3; --muted:#93a0b1; --line:#2b3643;
+  --c1:#3fc3c5; --c2:#f28c4e; --accent:#3fc3c5; --accent-fg:#06201f; --ok:#52c77a; --bad:#ff8a80; --grid:#242f3b; color-scheme:dark}
+body{background:var(--bg);color:var(--fg);font-family:var(--font-b);font-size:14px;line-height:1.5;
+  padding-block:24px 48px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.wrap{max-width:1180px;margin:0 auto;display:flex;flex-direction:column;gap:20px}
+.tag{font:500 11px var(--font-m);letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+h1{font:700 clamp(24px,4vw,34px)/1.15 var(--font-d);margin:4px 0 8px;text-wrap:balance}
+h2{font:700 16px var(--font-d);margin:0 0 12px}
+.lede{max-width:72ch;color:var(--muted);margin:0}
+.grid{display:grid;grid-template-columns:320px minmax(0,1fr);gap:20px;align-items:start}
+@media (max-width:860px){.grid{grid-template-columns:minmax(0,1fr)}}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:16px;min-width:0}
+.col{display:flex;flex-direction:column;gap:20px;min-width:0}
+label{display:block;font-weight:500;font-size:13px;margin-bottom:4px}
+.hint{font-size:12px;color:var(--muted);margin:3px 0 0}
+.field{margin-bottom:14px}
+input[type=text],input[type=number]{width:100%;box-sizing:border-box;font:400 14px var(--font-m);padding:8px 10px;border:1px solid var(--line);border-radius:6px;background:var(--surface2);color:var(--fg)}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+input:focus-visible,button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.btns{display:flex;gap:8px;flex-wrap:wrap;margin-top:4px}
+button{font:600 14px var(--font-b);padding:9px 16px;border-radius:6px;border:1px solid var(--line);background:var(--surface2);color:var(--fg);cursor:pointer}
+button.primary{background:var(--accent);color:var(--accent-fg);border-color:var(--accent)}
+button:disabled{opacity:.55;cursor:wait}
+.err{color:var(--bad);font-size:13px;margin-top:10px;min-height:1em}
+.status{font:400 12px var(--font-m);color:var(--muted);margin-top:10px;min-height:1.2em}
+.sec{font:500 11px var(--font-m);letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin:18px 0 10px;padding-top:12px;border-top:1px solid var(--line)}
+.scroll{overflow-x:auto}
+table{border-collapse:collapse;width:100%;font-variant-numeric:tabular-nums;font-family:var(--font-m);font-size:13px}
+th,td{padding:7px 10px;text-align:right;white-space:nowrap}
+th{font:500 11px var(--font-m);letter-spacing:.05em;text-transform:uppercase;color:var(--muted);border-bottom:1px solid var(--line)}
+th:first-child,td:first-child{text-align:left}
+td.win{font-weight:600;color:var(--ok)}
+tr.q td{background:var(--surface2)}
+.swatch{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:6px;vertical-align:baseline}
+.stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}
+@media (max-width:1000px){.stats{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.stat{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:12px 14px;min-width:0}
+.stat b{display:block;font:700 26px/1.1 var(--font-d);font-variant-numeric:tabular-nums}
+.stat span{font-size:12px;color:var(--muted)}
+.charts{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:20px}
+.charts .wide{grid-column:1/-1}
+@media (max-width:1000px){.charts{grid-template-columns:minmax(0,1fr)}}
+.legend{display:flex;gap:16px;flex-wrap:wrap;font-size:12px;color:var(--muted);margin-bottom:8px}
+svg{display:block;width:100%;height:auto;overflow:visible}
+svg text{font-family:var(--font-m);font-size:14px;fill:var(--muted)}
+svg .val{fill:var(--fg)}
+pre{margin:0;font:400 12px/1.5 var(--font-m);background:var(--surface2);border:1px solid var(--line);border-radius:6px;padding:12px;overflow-x:auto;white-space:pre}
+.analysis p{margin:0 0 10px;max-width:80ch}
+.badges{display:flex;gap:6px;flex-wrap:wrap}
+.badge{display:inline-block;font:500 12px var(--font-m);padding:2px 8px;border-radius:99px;border:1px solid var(--line)}
+.badge.ok{color:var(--ok);border-color:var(--ok)} .badge.no{color:var(--bad);border-color:var(--bad)}
+.tree{display:flex;flex-direction:column;align-items:center;gap:22px;min-width:max-content;padding:4px 8px}
+.lvl{display:flex;align-items:center;gap:10px}
+.nd{font:500 13px var(--font-m);border:1.5px solid var(--muted);border-radius:6px;padding:5px 9px;background:var(--surface2);white-space:nowrap}
+.nd.leaf{border-color:var(--c1)}
+.nd.root{border-color:var(--c2)}
+.arrow{color:var(--c1);font:500 13px var(--font-m)}
+.lvlname{font:500 11px var(--font-m);letter-spacing:.06em;text-transform:uppercase;color:var(--muted);align-self:flex-start}
+.rows{font:400 12px var(--font-m);color:var(--muted);margin-top:10px}
+#tip{position:fixed;pointer-events:none;background:var(--fg);color:var(--bg);font:400 12px var(--font-m);padding:5px 8px;border-radius:5px;z-index:20;display:none;max-width:280px}
+.empty{color:var(--muted);padding:24px 0;text-align:center}
+</style>
+
+<div class="wrap">
+  <header>
+    <div class="tag">CP25C01 · Advanced Data Structures · Ex. 3</div>
+    <h1>B+ tree index for an employee table</h1>
+    <p class="lede">Build a B+ tree over employee IDs, then measure its height, size and page reads for point lookups and range queries. Compare the indexed range query with a full table scan and with the theoretical height bound.</p>
+  </header>
+
+  <div class="grid">
+    <form class="panel" id="form" autocomplete="off">
+      <h2>Inputs</h2>
+      <div class="field">
+        <label for="N">Employee records</label>
+        <input type="number" id="N" value="100000" min="1000" max="500000" step="1000">
+        <p class="hint">1,000 to 500,000. Lab value: 100,000.</p>
+      </div>
+      <div class="field">
+        <label for="orders">Tree orders m to compare</label>
+        <input type="text" id="orders" value="4, 16, 64, 128" inputmode="numeric">
+        <p class="hint">Up to 6 values from 3 to 512. Order m means at most m children per node.</p>
+      </div>
+      <div class="field">
+        <label for="seed">Random seed</label>
+        <input type="number" id="seed" value="7" step="1">
+      </div>
+      <div class="sec">Queries</div>
+      <div class="two">
+        <div class="field"><label for="qorder">Order for queries</label><input type="number" id="qorder" value="64" min="3" max="512" step="1"></div>
+        <div class="field"><label for="sample">Lookups sampled</label><input type="number" id="sample" value="1000" min="10" max="20000" step="10"></div>
+      </div>
+      <div class="field">
+        <label for="pkey">Point query emp_id</label>
+        <input type="text" id="pkey" value="" placeholder="blank = a random existing id" inputmode="numeric">
+        <p class="hint">Ids run from 100000 to 998999. The same id is deleted afterwards.</p>
+      </div>
+      <div class="two">
+        <div class="field"><label for="lo">Range low</label><input type="number" id="lo" value="500000" step="1"></div>
+        <div class="field"><label for="hi">Range high</label><input type="number" id="hi" value="501000" step="1"></div>
+      </div>
+      <div class="sec">Small tree demo</div>
+      <div class="field">
+        <label for="dkeys">Keys to insert, in order</label>
+        <input type="text" id="dkeys" value="10, 20, 5, 6, 12, 30, 7, 17, 3, 25, 28, 40" inputmode="numeric">
+        <p class="hint">Up to 40 distinct whole numbers.</p>
+      </div>
+      <div class="field">
+        <label for="dorder">Demo order</label>
+        <input type="number" id="dorder" value="4" min="3" max="8" step="1">
+      </div>
+      <div class="btns">
+        <button type="submit" class="primary" id="run">Build and measure</button>
+        <button type="button" id="reset">Reset to lab values</button>
+      </div>
+      <div class="err" id="err" role="alert"></div>
+      <div class="status" id="status">Ready.</div>
+    </form>
+
+    <div class="col" id="results">
+      <div class="panel"><div class="empty">Building the first index…</div></div>
+    </div>
+  </div>
+</div>
+<div id="tip"></div>
+
+<script>
+(function(){
+"use strict";
+let rs=7;
+function seedRng(s){ rs=(s>>>0)||1; }
+function rnd(){ rs=(rs+0x6D2B79F5)>>>0; let t=rs; t=Math.imul(t^(t>>>15),t|1); t^=t+Math.imul(t^(t>>>7),t|61); return ((t^(t>>>14))>>>0)/4294967296; }
+const randInt=n=>Math.floor(rnd()*n);
+const $=id=>document.getElementById(id);
+const tick=()=>new Promise(r=>setTimeout(r,0));
+const fmt=(x,d=1)=>x.toLocaleString('en-US',{minimumFractionDigits:d,maximumFractionDigits:d});
+const esc=s=>String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/"/g,'&quot;');
+
+/* ---------- B+ tree ---------- */
+function bl(a,k){ let lo=0,hi=a.length; while(lo<hi){ const m=(lo+hi)>>1; if(a[m]<k) lo=m+1; else hi=m; } return lo; }
+function br(a,k){ let lo=0,hi=a.length; while(lo<hi){ const m=(lo+hi)>>1; if(a[m]<=k) lo=m+1; else hi=m; } return lo; }
+const mk=leaf=>({leaf,keys:[],children:[],next:null});
+class BPT{
+  constructor(order){ this.order=order; this.maxKeys=order-1; this.root=mk(true); this.reads=0; }
+  leafFor(key){ let n=this.root; this.reads++; while(!n.leaf){ n=n.children[br(n.keys,key)]; this.reads++; } return n; }
+  search(key){ const l=this.leafFor(key), i=bl(l.keys,key); return (i<l.keys.length&&l.keys[i]===key)?l.children[i]:null; }
+  range(lo,hi){
+    let leaf=this.leafFor(lo); const out=[];
+    while(leaf){
+      for(let i=0;i<leaf.keys.length;i++){ const k=leaf.keys[i]; if(k>hi) return out; if(k>=lo) out.push([k,leaf.children[i]]); }
+      leaf=leaf.next; if(leaf) this.reads++;
+    }
+    return out;
+  }
+  insert(key,rid){
+    const sp=this._ins(this.root,key,rid);
+    if(sp){ const r=mk(false); r.keys=[sp[0]]; r.children=[this.root,sp[1]]; this.root=r; }
+  }
+  _ins(n,key,rid){
+    if(n.leaf){
+      const i=bl(n.keys,key);
+      if(i<n.keys.length&&n.keys[i]===key){ n.children[i]=rid; return null; }
+      n.keys.splice(i,0,key); n.children.splice(i,0,rid);
+      if(n.keys.length<=this.maxKeys) return null;
+      const mid=n.keys.length>>1, r=mk(true);
+      r.keys=n.keys.slice(mid); r.children=n.children.slice(mid);
+      n.keys=n.keys.slice(0,mid); n.children=n.children.slice(0,mid);
+      r.next=n.next; n.next=r;
+      return [r.keys[0],r];                       // copy-up
+    }
+    const i=br(n.keys,key), sp=this._ins(n.children[i],key,rid);
+    if(!sp) return null;
+    n.keys.splice(i,0,sp[0]); n.children.splice(i+1,0,sp[1]);
+    if(n.keys.length<=this.maxKeys) return null;
+    const mid=n.keys.length>>1, up=n.keys[mid], r=mk(false);
+    r.keys=n.keys.slice(mid+1); r.children=n.children.slice(mid+1);
+    n.keys=n.keys.slice(0,mid); n.children=n.children.slice(0,mid+1);
+    return [up,r];                                // push-up
+  }
+  delete(key){                                    // lazy deletion: underfull leaves are tolerated
+    const l=this.leafFor(key), i=bl(l.keys,key);
+    if(i<l.keys.length&&l.keys[i]===key){ l.keys.splice(i,1); l.children.splice(i,1); return true; }
+    return false;
+  }
+  stats(){
+    let h=0,n=this.root; for(;;){ h++; if(n.leaf) break; n=n.children[0]; }
+    let cnt=0,leaves=0,keys=0; const st=[this.root];
+    while(st.length){ const x=st.pop(); cnt++; if(x.leaf){ leaves++; keys+=x.keys.length; } else for(const c of x.children) st.push(c); }
+    return {h,cnt,leaves,keys};
+  }
+  chainOk(expected){                              // walk the leaf chain: sorted, complete
+    let n=this.root; while(!n.leaf) n=n.children[0];
+    let prev=-Infinity,c=0;
+    for(;n;n=n.next) for(const k of n.keys){ if(k<=prev) return false; prev=k; c++; }
+    return c===expected;
+  }
+  levels(){
+    const out=[]; let lv=[this.root];
+    while(lv.length){ out.push(lv); lv=lv[0].leaf?[]:lv.flatMap(n=>n.children); }
+    return out;
+  }
+}
+
+/* ---------- run ---------- */
+const DEPTS=['CSE','ECE','MECH','CIVIL','EEE'];
+async function runAll(cfg,setStatus){
+  seedRng(cfg.seed);
+  const out={cfg,checks:{}}; let ok={chain:true,lookup:true,range:true,del:true};
+
+  // small demo
+  setStatus('building the small demo tree…'); await tick();
+  const demo=new BPT(cfg.dorder); cfg.dkeys.forEach(k=>demo.insert(k,'RID'+k));
+  out.demo={levels:demo.levels().map(l=>l.map(n=>({leaf:n.leaf,keys:n.keys.slice()}))),h:demo.stats().h};
+  if(!demo.chainOk(cfg.dkeys.length)) ok.chain=false;
+
+  // table
+  setStatus(`generating ${cfg.N.toLocaleString()} employee records…`); await tick();
+  const N=cfg.N, span=899999, set=new Set();
+  while(set.size<N) set.add(100000+randInt(span));
+  const ids=Array.from(set);
+  const dept=new Uint8Array(N), sal=new Int32Array(N);
+  for(let i=0;i<N;i++){ dept[i]=randInt(5); sal[i]=30000+randInt(170001); }
+  const rec=rid=>({emp_id:ids[rid],name:'Emp'+rid,dept:DEPTS[dept[rid]],salary:sal[rid]});
+  const sorted=Float64Array.from(ids).sort();
+  const brute=(lo,hi)=>{ let c=0; for(let i=0;i<sorted.length;i++){ const k=sorted[i]; if(k>=lo&&k<=hi) c++; } return c; };
+
+  const orders=cfg.orders.slice(); if(!orders.includes(cfg.qorder)) orders.push(cfg.qorder);
+  const trees=new Map(), rows=[];
+  for(const m of orders){
+    setStatus(`inserting ${N.toLocaleString()} keys, order m = ${m}…`); await tick();
+    const t=new BPT(m);
+    for(let rid=0;rid<N;rid++) t.insert(ids[rid],rid);
+    const s=t.stats();
+    if(!t.chainOk(N)) ok.chain=false;
+    t.reads=0; const S=Math.min(cfg.sample,N);
+    for(let i=0;i<S;i++){ const rid=t.search(ids[i]); if(rid===null||ids[rid]!==ids[i]) ok.lookup=false; }
+    const io=t.reads/S;
+    t.reads=0; const rr=t.range(cfg.lo,cfg.hi), pages=t.reads;
+    const exp=brute(cfg.lo,cfg.hi);
+    if(rr.length!==exp||rr.some((r,i)=>i&&r[0]<=rr[i-1][0])) ok.range=false;
+    const half=Math.ceil(m/2), bound=Math.ceil(Math.log(N)/Math.log(half));
+    rows.push({m,h:s.h,bound,cnt:s.cnt,leaves:s.leaves,fill:100*s.keys/(s.leaves*(m-1)),io,pages,nrows:rr.length,shown:cfg.orders.includes(m)});
+    trees.set(m,{t,rr});
+  }
+  out.rows=rows;
+
+  // point query, range sample, delete on the query order
+  setStatus('point query, range query and delete…'); await tick();
+  const {t,rr}=trees.get(cfg.qorder);
+  const q=cfg.pkey===null?ids[Math.min(123,N-1)]:cfg.pkey;
+  t.reads=0; const prid=t.search(q); const pr=t.reads;
+  out.point={q,found:prid!==null,record:prid!==null?rec(prid):null,reads:pr};
+  const qr=rows.find(r=>r.m===cfg.qorder);
+  out.range={lo:cfg.lo,hi:cfg.hi,n:qr.nrows,pages:qr.pages,sample:rr.slice(0,3).map(([k,rid])=>rec(rid))};
+  let del=null;
+  if(prid!==null){
+    const removed=t.delete(q), after=t.search(q);
+    del={removed,after};
+    if(!removed||after!==null) ok.del=false;
+    const s2=t.stats(); if(s2.keys!==N-1) ok.del=false;
+  }
+  out.del=del;
+  out.checks=ok;
+  return out;
+}
+
+/* ---------- charts ---------- */
+function niceTicks(max,n){
+  const raw=max/n, mag=Math.pow(10,Math.floor(Math.log10(raw))), r=raw/mag;
+  const step=(r<=1?1:r<=2?2:r<=5?5:10)*mag, o=[];
+  for(let v=0;;v+=step){ o.push(v); if(v>=max-step*0.001) break; }
+  return o;
+}
+const tickFmt=v=>v>=1e6?(v/1e6)+'M':v>=1000?(v/1000)+'k':String(+v.toPrecision(3));
+/* groups: [{label,bars:[{value,color,vlabel,tip}]}] */
+function barChart(groups,{log=false,unit='',label=''}={}){
+  const W=560,Ht=320,L=56,R=12,T=34,B=36, iw=W-L-R, ih=Ht-T-B;
+  const vals=groups.flatMap(g=>g.bars.map(b=>b.value)), mx=Math.max(...vals), mn=Math.min(...vals);
+  let ticks,lo=0,top;
+  if(log){ lo=Math.pow(10,Math.floor(Math.log10(Math.max(mn*0.9,0.5)))); top=Math.pow(10,Math.ceil(Math.log10(mx*1.2))); ticks=[]; for(let v=lo;v<=top*1.0001;v*=10) ticks.push(v); }
+  else { ticks=niceTicks(mx*1.12,4); top=ticks[ticks.length-1]; }
+  const Y=v=>T+ih-(log?(Math.log10(Math.max(v,lo))-Math.log10(lo))/(Math.log10(top)-Math.log10(lo)):v/top)*ih;
+  let s=`<svg viewBox="0 0 ${W} ${Ht}" role="img" aria-label="${esc(label)}">`;
+  ticks.forEach(t=>{ s+=`<line x1="${L}" x2="${W-R}" y1="${Y(t)}" y2="${Y(t)}" stroke="var(--grid)"/><text x="${L-6}" y="${Y(t)+4}" text-anchor="end">${tickFmt(t)}</text>`; });
+  const gw=iw/groups.length;
+  groups.forEach((g,i)=>{
+    const nb=g.bars.length, bw=Math.min(46,(gw*0.72)/nb), cx=L+gw*i+gw/2, x0=cx-(bw*nb+(nb-1)*2)/2;
+    g.bars.forEach((b,j)=>{
+      const x=x0+j*(bw+2), yy=Y(b.value), h=Math.max(1,T+ih-yy), rr=Math.min(4,bw/2,h);
+      s+=`<path d="M${x},${T+ih} V${yy+rr} Q${x},${yy} ${x+rr},${yy} H${x+bw-rr} Q${x+bw},${yy} ${x+bw},${yy+rr} V${T+ih} Z" fill="${b.color}" data-tip="${esc(b.tip)}"/>`;
+      s+=`<text class="val" x="${x+bw/2}" y="${yy-6}" text-anchor="middle" style="font-size:${nb>1?12:13}px">${b.vlabel}</text>`;
+    });
+    s+=`<text x="${cx}" y="${Ht-12}" text-anchor="middle" style="font-size:${groups.length>5?11:13}px">${g.label}</text>`;
+  });
+  s+=`<line x1="${L}" x2="${W-R}" y1="${T+ih}" y2="${T+ih}" stroke="var(--muted)"/>`;
+  s+=`<text x="${L}" y="${T-14}" style="font-size:12px">${unit}${log?' (log scale)':''}</text></svg>`;
+  return s;
+}
+const sw=(c,t)=>`<span><span class="swatch" style="background:${c}"></span>${t}</span>`;
+
+/* ---------- render ---------- */
+function treeHtml(levels){
+  const names=['root','internal','leaves'];
+  return `<div class="scroll"><div class="tree">`+levels.map((lv,i)=>{
+    const leafRow=lv[0].leaf;
+    const nodes=lv.map((n,j)=>`<span class="nd ${leafRow?'leaf':(i===0?'root':'')}">${n.keys.length?esc('['+n.keys.join(', ')+']'):'[ ]'}</span>`+(leafRow&&j<lv.length-1?'<span class="arrow">→</span>':''));
+    return `<div><div class="lvlname">${leafRow?'leaf level (linked)':(i===0?'root':'internal')}</div><div class="lvl">${nodes.join('')}</div></div>`;
+  }).join('')+`</div></div>`;
+}
+function render(res){
+  const {cfg,rows,demo,point,range,del,checks}=res, N=cfg.N;
+  const shown=rows.filter(r=>r.shown);
+  const qr=rows.find(r=>r.m===cfg.qorder);
+  const ratio=N/range.pages;
+
+  const stats=`<div class="stats">
+    <div class="stat"><b>${qr.h}</b><span>tree height at m = ${cfg.qorder} (page reads per lookup)</span></div>
+    <div class="stat"><b>${fmt(qr.cnt,0)}</b><span>nodes (pages) at m = ${cfg.qorder}</span></div>
+    <div class="stat"><b>${range.pages}</b><span>pages read for the range query (${range.n} rows)</span></div>
+    <div class="stat"><b>×${fmt(ratio,0)}</b><span>fewer reads than a full scan of ${N.toLocaleString()} records</span></div></div>`;
+
+  const c1=barChart(shown.map(r=>({label:'m='+r.m,bars:[
+    {value:r.h,color:'var(--c1)',vlabel:r.h,tip:`m = ${r.m}: measured height ${r.h}`},
+    {value:r.bound,color:'var(--c2)',vlabel:r.bound,tip:`m = ${r.m}: bound ceil(log_${Math.ceil(r.m/2)} ${N.toLocaleString()}) = ${r.bound}`}]})),{label:'Height by order'});
+  const c2=barChart(shown.map(r=>({label:'m='+r.m,bars:[{value:r.cnt,color:'var(--c1)',vlabel:r.cnt>=1000?fmt(r.cnt/1000,1)+'k':r.cnt,tip:`m = ${r.m}: ${r.cnt.toLocaleString()} nodes, ${r.leaves.toLocaleString()} leaves, ${fmt(r.fill,0)}% leaf fill`}]})),{log:true,unit:'nodes',label:'Nodes by order'});
+  const c3=barChart([...shown.map(r=>({label:'m='+r.m,bars:[{value:Math.max(r.pages,1),color:'var(--c1)',vlabel:r.pages,tip:`Index range query, m = ${r.m}: ${r.pages} pages for ${r.nrows} rows`}]})),
+    {label:'full scan',bars:[{value:N,color:'var(--c2)',vlabel:N.toLocaleString(),tip:`Full table scan reads ${N.toLocaleString()} records`}]}],{log:true,unit:'pages / records read',label:'Range query cost vs full scan'});
+
+  const c4=barChart(shown.map(r=>({label:'m='+r.m,bars:[{value:r.fill,color:'var(--c1)',vlabel:fmt(r.fill,0)+'%',tip:`m = ${r.m}: average leaf fill ${fmt(r.fill,1)}%`}]})),{unit:'% of leaf slots used',label:'Average leaf fill'});
+  const rowsHtml=rows.filter(r=>r.shown).map(r=>`<tr class="${r.m===cfg.qorder?'q':''}"><td>${r.m}</td><td>${r.h}</td><td>${r.bound}</td><td>${r.cnt.toLocaleString()}</td><td>${r.leaves.toLocaleString()}</td><td>${fmt(r.fill,0)}%</td><td>${fmt(r.io)}</td><td>${r.pages}</td></tr>`).join('');
+
+  const L=[];
+  L.push('B+ TREE INDEX ON EMPLOYEE(emp_id)','='.repeat(60),`Small tree (order ${cfg.dorder}) after ${cfg.dkeys.length} inserts:`);
+  demo.levels.forEach(lv=>L.push('  '+lv.map(n=>'['+n.keys.join(', ')+']').join(' ')));
+  L.push('',`Bulk table: ${N.toLocaleString()} employee records`,`${'Order'.padStart(6)} | ${'Height'.padStart(6)} | ${'Nodes'.padStart(7)} | ${'Leaves'.padStart(7)} | ${'I/O per lookup'.padStart(14)}`);
+  shown.forEach(r=>L.push(`${String(r.m).padStart(6)} | ${String(r.h).padStart(6)} | ${String(r.cnt).padStart(7)} | ${String(r.leaves).padStart(7)} | ${fmt(r.io).padStart(14)}`));
+  L.push('');
+  if(point.found){ const p=point.record; L.push(`Point query emp_id=${point.q} (order ${cfg.qorder}): (${p.emp_id}, '${p.name}', '${p.dept}', ${p.salary}), ${point.reads} page reads`); }
+  else L.push(`Point query emp_id=${point.q}: not found (${point.reads} page reads)`);
+  L.push(`Range query ${range.lo}..${range.hi} -> ${range.n} rows, pages read = ${range.pages}`);
+  range.sample.forEach(p=>L.push(`  (${p.emp_id}, '${p.name}', '${p.dept}', ${p.salary})`));
+  L.push(`Full-scan equivalent would read ${N.toLocaleString()} records`);
+  if(del) L.push(`After DELETE emp_id=${point.q}: search -> ${del.after===null?'None':del.after}`); else L.push('DELETE skipped: the point-query key is not in the table.');
+
+  const allWithin=shown.every(r=>r.h<=r.bound);
+  const first=shown[0], last=shown[shown.length-1];
+  const analysis=`
+   <p><b>Height.</b> Raising the order from ${first.m} to ${last.m} changes the height from ${first.h} to ${last.h}. Every point lookup reads one node per level, so the height equals the page reads per lookup (${fmt(first.io)} for m = ${first.m}, ${fmt(last.io)} for m = ${last.m}). ${allWithin?'The measured height is at or below the bound ⌈log<sub>⌈m/2⌉</sub> n⌉ for every order, because nodes are usually more than half full.':'At least one order exceeded the bound shown, which should not happen for a valid B+ tree. Check the inputs.'}</p>
+   <p><b>Size.</b> Higher orders pack more keys in each node, so there are fewer nodes: ${first.cnt.toLocaleString()} for m = ${first.m} against ${last.cnt.toLocaleString()} for m = ${last.m}. Average leaf fill is ${fmt(first.fill,0)}% to ${fmt(last.fill,0)}%.</p>
+   <p><b>Range query.</b> With order ${cfg.qorder}, the query ${range.lo}..${range.hi} returned ${range.n} rows after reading ${range.pages} pages: one descent to the first leaf, then the leaf chain. A full table scan reads ${N.toLocaleString()} records, ${fmt(ratio,0)}× more. In a real DBMS the order is chosen so one node fills one disk page.</p>
+   <p><b>Delete.</b> Deletion here is lazy, as in many database systems. The key is removed from its leaf and underfull leaves are left as they are, so no merging is done.</p>`;
+
+  $('results').innerHTML=`
+   <div class="panel">
+     <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;justify-content:space-between">
+       <h2 style="margin:0">Results</h2>
+       <div class="badges">
+         <span class="badge ${checks.chain?'ok':'no'}">${checks.chain?'✓':'✗'} leaf chain sorted and complete</span>
+         <span class="badge ${checks.lookup?'ok':'no'}">${checks.lookup?'✓':'✗'} sampled lookups correct</span>
+         <span class="badge ${checks.range?'ok':'no'}">${checks.range?'✓':'✗'} range = brute force</span>
+         <span class="badge ${checks.del?'ok':'no'}">${checks.del?'✓':'✗'} delete verified</span>
+       </div>
+     </div>
+   </div>
+   <div class="panel"><h2>Small tree, order ${cfg.dorder}, after ${cfg.dkeys.length} inserts</h2>${treeHtml(demo.levels)}
+     <p class="hint" style="margin-top:12px">Leaf splits copy the first key of the new right leaf up to the parent. Internal splits push the middle key up. Arrows show the leaf chain used by range scans.</p></div>
+   ${stats}
+   <div class="panel"><div class="charts">
+     <div><h2>Height by order</h2><div class="legend">${sw('var(--c1)','Measured')}${sw('var(--c2)','Bound ⌈log⌈m/2⌉ n⌉')}</div>${c1}</div>
+     <div><h2>Nodes by order</h2><div class="legend">${sw('var(--c1)','Total nodes (pages)')}</div>${c2}</div>
+     <div><h2>Range query ${range.lo}..${range.hi}: index vs full scan</h2><div class="legend">${sw('var(--c1)','Index, pages read')}${sw('var(--c2)','Full table scan, records read')}</div>${c3}</div>
+     <div><h2>Average leaf fill</h2><div class="legend">${sw('var(--c1)','Keys stored / leaf capacity')}</div>${c4}</div>
+   </div></div>
+   <div class="panel"><h2>Index by order, ${N.toLocaleString()} records</h2><div class="scroll"><table>
+     <thead><tr><th>Order m</th><th>Height</th><th>Bound</th><th>Nodes</th><th>Leaves</th><th>Leaf fill</th><th>I/O per lookup</th><th>Range pages</th></tr></thead><tbody>${rowsHtml}</tbody></table></div>
+     <p class="hint">Shaded row: the order used for the point and range queries. I/O per lookup is averaged over ${Math.min(cfg.sample,N).toLocaleString()} lookups.</p></div>
+   <div class="panel"><h2>Queries (order ${cfg.qorder})</h2>
+     <div class="scroll"><table><thead><tr><th>emp_id</th><th>name</th><th>dept</th><th>salary</th></tr></thead><tbody>
+     ${point.found?`<tr class="q"><td>${point.record.emp_id}</td><td>${point.record.name}</td><td>${point.record.dept}</td><td>${point.record.salary.toLocaleString()}</td></tr>`:`<tr><td colspan="4" style="text-align:left">emp_id ${esc(point.q)} not found</td></tr>`}
+     ${range.sample.map(p=>`<tr><td>${p.emp_id}</td><td>${p.name}</td><td>${p.dept}</td><td>${p.salary.toLocaleString()}</td></tr>`).join('')}
+     </tbody></table></div>
+     <p class="rows">First row: point query (${point.reads} page reads). Other rows: first ${range.sample.length} of ${range.n} results of the range query.${del?` After delete, search for ${point.q} returns None.`:''}</p></div>
+   <div class="panel analysis"><h2>Analysis</h2>${analysis}</div>
+   <div class="panel"><h2>Console output</h2><pre>${esc(L.join('\n'))}</pre></div>`;
+}
+
+/* ---------- tooltip ---------- */
+const tip=$('tip');
+document.addEventListener('pointermove',e=>{
+  const t=e.target.closest&&e.target.closest('[data-tip]');
+  if(!t){ tip.style.display='none'; return; }
+  tip.textContent=t.getAttribute('data-tip'); tip.style.display='block';
+  const w=tip.offsetWidth; tip.style.left=Math.min(window.innerWidth-w-8,e.clientX+12)+'px'; tip.style.top=(e.clientY+14)+'px';
+});
+
+/* ---------- form ---------- */
+function nums(s){ return s.split(/[,\s]+/).filter(Boolean).map(Number); }
+function readCfg(){
+  const N=Number($('N').value), seed=Number($('seed').value), qorder=Number($('qorder').value), sample=Number($('sample').value);
+  const lo=Number($('lo').value), hi=Number($('hi').value), dorder=Number($('dorder').value);
+  if(!Number.isInteger(N)||N<1000||N>500000) throw new Error('Employee records must be a whole number from 1,000 to 500,000.');
+  const orders=[...new Set(nums($('orders').value))].sort((a,b)=>a-b);
+  if(!orders.length||orders.length>6||orders.some(m=>!Number.isInteger(m)||m<3||m>512)) throw new Error('Enter 1 to 6 whole orders between 3 and 512, separated by commas.');
+  if(!Number.isInteger(seed)) throw new Error('Seed must be a whole number.');
+  if(!Number.isInteger(qorder)||qorder<3||qorder>512) throw new Error('Order for queries must be from 3 to 512.');
+  if(!Number.isInteger(sample)||sample<10||sample>20000) throw new Error('Lookups sampled must be from 10 to 20,000.');
+  if(!Number.isFinite(lo)||!Number.isFinite(hi)||lo>hi) throw new Error('Range low must not exceed range high.');
+  if(!Number.isInteger(dorder)||dorder<3||dorder>8) throw new Error('Demo order must be from 3 to 8.');
+  const dk=nums($('dkeys').value);
+  if(!dk.length||dk.length>40||dk.some(k=>!Number.isInteger(k))||new Set(dk).size!==dk.length) throw new Error('Demo keys must be 1 to 40 distinct whole numbers.');
+  const ps=$('pkey').value.trim(); let pkey=null;
+  if(ps!==''){ pkey=Number(ps); if(!Number.isInteger(pkey)) throw new Error('Point query emp_id must be a whole number or blank.'); }
+  return {N,orders,seed,qorder,sample,lo,hi,dorder,dkeys:dk,pkey};
+}
+let busy=false;
+async function go(){
+  if(busy) return;
+  $('err').textContent='';
+  let cfg; try{ cfg=readCfg(); }catch(e){ $('err').textContent=e.message; return; }
+  busy=true; $('run').disabled=true; $('run').textContent='Running…';
+  const t0=performance.now();
+  try{
+    const res=await runAll(cfg,s=>{ $('status').textContent=s; });
+    render(res);
+    $('status').textContent=`Done in ${fmt((performance.now()-t0)/1000,1)} s.`;
+  }catch(e){ $('err').textContent='Run failed: '+e.message; $('status').textContent=''; }
+  busy=false; $('run').disabled=false; $('run').textContent='Build and measure';
+}
+$('form').addEventListener('submit',e=>{ e.preventDefault(); go(); });
+$('reset').addEventListener('click',()=>{
+  $('N').value='100000'; $('orders').value='4, 16, 64, 128'; $('seed').value='7'; $('qorder').value='64'; $('sample').value='1000';
+  $('pkey').value=''; $('lo').value='500000'; $('hi').value='501000'; $('dkeys').value='10, 20, 5, 6, 12, 30, 7, 17, 3, 25, 28, 40'; $('dorder').value='4'; go();
+});
+go();
+})();
+</script>
+
+</body></html>
